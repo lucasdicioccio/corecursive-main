@@ -36,6 +36,7 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - corecursive-main
+    - unix
 
 tests:
   corecursive-main-test:

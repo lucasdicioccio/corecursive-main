@@ -1,9 +1,10 @@
 module Main where
 
 import System.Process.Corecursive
+import System.Posix.Process
 
 main :: IO ()
-main = corecursiveMain parse unparse go
+main = runCorecursiveApp (app parse unparse go)
   where
     parse :: [String] -> IO [String]
     parse = pure . id
@@ -12,5 +13,8 @@ main = corecursiveMain parse unparse go
     unparse = pure  . id
 
     go self args
-      | length args > 100  = print "done"
-      | otherwise          = print args >> callback self (show (length args):args)
+      | length args > 10 = print "done"
+      | otherwise        = do
+          pid <- getProcessID
+          dat <- readCallback self (show pid:args)
+          putStr $ show pid ++ show args ++ " " ++ dat

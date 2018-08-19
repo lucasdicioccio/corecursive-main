@@ -3,18 +3,26 @@ module Main where
 import System.Process.Corecursive
 import System.Posix.Process
 
+newtype Arg = Arg { getListOfThings :: [String] }
+
+numberOfThings :: Arg -> Int
+numberOfThings = length . getListOfThings
+
+append :: Show a => a -> Arg -> Arg
+append x (Arg xs) = Arg (show x:xs)
+
 main :: IO ()
 main = runCorecursiveApp (app parse unparse go)
   where
-    parse :: [String] -> IO [String]
-    parse = pure . id
+    parse :: [String] -> IO Arg
+    parse = pure . Arg
 
-    unparse :: [String] -> IO [String]
-    unparse = pure  . id
+    unparse :: Arg -> IO [String]
+    unparse = pure  . getListOfThings
 
-    go self args
-      | length args > 10 = print "done"
-      | otherwise        = do
+    go self arg
+      | numberOfThings arg > 10 = print "done"
+      | otherwise               = do
           pid <- getProcessID
-          dat <- readCallback self (show pid:args)
-          putStr $ show pid ++ show args ++ " " ++ dat
+          dat <- readCallback self (append pid arg)
+          putStr $ show pid ++ show (getListOfThings arg) ++ " " ++ dat

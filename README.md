@@ -1,5 +1,7 @@
 # corecursive-main
 
+On Hackage: https://hackage.haskell.org/package/corecursive-main .
+
 Functional programmers are used to program with (co-)recursive functions.  What
 if the main program was itself recursive? One could benefit the underlying
 operating system scheduler to orchestrate resources. For instance, limiting

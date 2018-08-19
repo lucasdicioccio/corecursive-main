@@ -15,7 +15,7 @@ import Control.Monad.IO.Class (liftIO, MonadIO)
 import System.Environment (getArgs, getExecutablePath)
 import System.Process (callProcess, readProcess)
 
-import System.Process.Corecursive.Types
+import System.Process.Corecursive.Base (runApp, app, App, Self(..))
 
 -- | Run function for an App which arguments are read from the command line
 -- using 'getArgs' and for which the binary is discovered from

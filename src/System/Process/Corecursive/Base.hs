@@ -8,7 +8,7 @@
 -- are free to chose the mechanism they want to:
 -- - start the recursive program
 -- - retrieve a return-value (if the recursive program ever returns)
-module System.Process.Corecursive.Types
+module System.Process.Corecursive.Base
     ( App (..)
     , app
     , runApp

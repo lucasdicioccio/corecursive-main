@@ -29,7 +29,6 @@ serializing arguments over the command-line parameters.
 Future versions of this package or sibling packages will likely provide:
 - support for 'JSON' or 'Dhall' serialization format
 - support for 'stdin' or networked serialization mechanisms
-- remote calls using `ssh`
 
 ## Envisionned usages
 

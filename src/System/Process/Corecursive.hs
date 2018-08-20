@@ -1,9 +1,15 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 -- | A module to facilitate and demonstrate a programming pattern where
 -- application instances for a system is (co-)recursive.
 module System.Process.Corecursive
     ( runCorecursiveApp
     , callback
     , readCallback
+    -- * over SSH
+    , SSHInfo(..)
+    , UserName(..)
+    , HostName(..)
+    , sshCallback
     -- * re-exported for convenience
     , App
     , Self
@@ -12,6 +18,9 @@ module System.Process.Corecursive
 
 import Control.Monad (void)
 import Control.Monad.IO.Class (liftIO, MonadIO)
+import Data.String (IsString)
+import Data.Text (Text)
+import qualified Data.Text as Text
 import System.Environment (getArgs, getExecutablePath)
 import System.Process (callProcess, readProcess)
 
@@ -39,3 +48,36 @@ readCallback self a = do
     exe <- executable self
     args <- unparse self $ a
     liftIO $ readProcess exe args ""
+
+newtype UserName = UserName { getUserName :: Text }
+  deriving (Eq,Ord,Show,IsString)
+
+newtype HostName = HostName { getHostName :: Text }
+  deriving (Eq,Ord,Show,IsString)
+
+data SSHInfo = SSHInfo {
+    user       :: UserName
+  , host       :: HostName
+  , remotePath :: FilePath
+  } 
+
+sshCallback
+  :: MonadIO m
+  => Self m [String] arg FilePath
+  -> SSHInfo
+  -> arg
+  -> m String
+sshCallback self ssh a = do
+    exe <- executable self
+    args <- unparse self $ a
+    copySSH ssh exe
+    runSSH ssh args
+  where
+    copySSH (SSHInfo user host rpath) lpath =
+        let host' = Text.unpack (getHostName host) in
+        let user' = Text.unpack (getUserName user) in
+        liftIO $ callProcess "scp" [ lpath , user' ++ "@" ++ host' ++ ":" ++ rpath]
+    runSSH (SSHInfo user host rpath) args =
+        let host' = Text.unpack (getHostName host) in
+        let user' = Text.unpack (getUserName user) in
+        liftIO $ readProcess "ssh" (["-l", user', host', "--", rpath] ++ args) ""

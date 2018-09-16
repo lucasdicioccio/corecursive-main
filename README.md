@@ -24,7 +24,9 @@ arguments and return values back-and-forth the call-site and the execution
 site. This package minimizes the developper effort to perform this translation.
 
 Currently, one mode is supported: spawning a child process on the same OS while
-serializing arguments over the command-line parameters.
+serializing arguments over the command-line parameters. A library user with
+many entry points may want to leverage the distributed-closure capability to
+sidestep writing many encoder/decoder.
 
 Future versions of this package or sibling packages will likely provide:
 - support for 'JSON' or 'Dhall' serialization format

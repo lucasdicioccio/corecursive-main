@@ -1,17 +1,23 @@
+{-# LANGUAGE StaticPointers   #-}
 {-# LANGUAGE TypeApplications #-}
 module Main where
 
 import Control.Concurrent.Async
+import Control.Distributed.Closure (closure, unclosure)
+import qualified Data.ByteString.Lazy.Char8 as ByteString
 import qualified Data.Text as Text
 import System.Process.Corecursive.Base (Self(..))
+import System.Process.Corecursive.Closure
 import System.Process.Corecursive
 import System.Posix.Process
 
-data Arg = 
+data Arg =
     Help
   | Things [String]
   | Job Int
   | SSHLeader String [String] -- User [Host]
+  | StartB64
+  | Base64Closure ByteString.ByteString
 
 main :: IO ()
 main = runCorecursiveApp (app parse unparse go)
@@ -21,18 +27,22 @@ main = runCorecursiveApp (app parse unparse go)
     parse ("rec":xs)          = pure $ Things xs
     parse ("ssh-leader":x:xs) = pure $ SSHLeader x xs
     parse ("job":x:[])        = pure $ Job (read x)
+    parse ("start-b64":[])    = pure StartB64
+    parse ("b64":x:[])        = pure $ Base64Closure (ByteString.pack x)
     parse args                =
         putStrLn ("un-understood arguments: " ++ show args) >> pure Help
 
     unparse :: Arg -> IO [String]
-    unparse Help        = pure []
-    unparse (Things xs) = pure ("rec":xs)
-    unparse (Job n)     = pure ("job":show n:[])
+    unparse (Things xs)         = pure ("rec":xs)
+    unparse (Job n)             = pure ("job":show n:[])
+    unparse (Base64Closure arg) = pure ("b64":ByteString.unpack arg:[])
 
     go _ Help                    = printHelp
     go self arg@(Things xs)      = goThings self xs
     go self arg@(SSHLeader u hs) = goSSHLeader self u hs
     go self arg@(Job n)          = goBigJob self n
+    go self StartB64             = goStartB64 self
+    go self (Base64Closure arg)  = goClosure self (unclosure $ parseClosureB64 arg)
 
 goBigJob self n
     -- If n is large, split the input in two and ask two jobs to work on
@@ -51,7 +61,7 @@ goSSHLeader self user hosts = do
     -- number (e.g., if two hosts resolve to the same machine).
     let rpath = "~/corecursive-main-exe"
     let sshinfos = [ SSHInfo (UserName $ Text.pack user) (HostName $ Text.pack host) (rpath ++ "." ++ idx) | (idx,host) <- zip (fmap show [1..]) hosts ]
-  
+
     -- Use Async's 'mapConcurrently' (best thing since sliced bread) to
     -- run an SSH session for each call and collect the results.
     results <- mapConcurrently callBackThing sshinfos
@@ -72,9 +82,22 @@ goThings self xs
       dat <- readCallback self (Things $ show pid : xs)
       putStr $ show pid ++ show xs ++ " " ++ dat
 
+goStartB64 self = do
+    let go = readCallback self . Base64Closure . unparseClosureB64
+    putStrLn =<< go (static closure1)
+    putStrLn =<< go (static closure2)
+
+goClosure self action = do
+    print "from-closure"
+    action
+
+closure1 = print "hello"
+closure2 = print "world"
+
 printHelp = putStrLn $ unlines [
     "usage: "
   , "<exe> rec                             # print ten recursive things"
   , "<exe> ssh-leader <user> <hostname|..> # copy as user on hosts and call 'rec' on each of them concurrently"
   , "<exe> job <n>                         # double a number by recursively breaking it in small pieces"
+  , "<exe> start-b64                       # demo using a closure serialization"
   ]
